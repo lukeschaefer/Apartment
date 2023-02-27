@@ -9,6 +9,8 @@
     "deploy": "vercel --prod"
   },
   "devDependencies": {
+    "@types/three": "^0.149.0",
+    "mesh-baked-material": "^1.0.4",
     "vercel": "^28.10.1",
     "vite": "^4.0.4"
   },
