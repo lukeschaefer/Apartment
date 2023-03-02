@@ -32,9 +32,16 @@ const bakeTextures = [
   "Wallpaper",
 ]
 
+const background = Resources.add("background.jpg")
+
+
+
 // Model:
 const apartmentModel = Resources.add("apartment.glb", (gltf) => {
-  const bakeMaterial = new THREE.MeshBasicMaterial({ map: bakeTexture.get() })
+  const text = bakeTexture.get();
+  text.flipY = false;
+  text.encoding = THREE.LinearEncoding;
+  const bakeMaterial = new THREE.MeshBasicMaterial({ map: text })
 
   gltf.scene.traverse((child) => {
     if (child.name == "sunblock") child.remove();
@@ -48,6 +55,14 @@ const apartmentModel = Resources.add("apartment.glb", (gltf) => {
 
 Resources.loadAll().then(() => {
   scene.add(apartmentModel.get());
+
+  // Scene background:
+  const bgTexture = background.get();
+  const bgTarget = new THREE.WebGLCubeRenderTarget(bgTexture.image.height);
+  bgTarget.fromEquirectangularTexture(renderer, bgTexture);
+  bgTarget.texture.encoding = THREE.sRGBEncoding;
+  scene.background = bgTarget.texture;
+  return bgTarget;
 })
 
 
