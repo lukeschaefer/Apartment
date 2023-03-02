@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { Resources } from './Resources'
 import * as dat from 'lil-gui'
-
+import {MeshBakedMaterial} from 'mesh-baked-material'
 /**
  * Base
  */
@@ -40,8 +40,8 @@ const background = Resources.add("background.jpg")
 const apartmentModel = Resources.add("apartment.glb", (gltf) => {
   const text = bakeTexture.get();
   text.flipY = false;
-  text.encoding = THREE.LinearEncoding;
-  const bakeMaterial = new THREE.MeshBasicMaterial({ map: text })
+  text.encoding = THREE.sRGBEncoding;
+  const bakeMaterial = new MeshBakedMaterial({ map: text, roughness: 0.5, metalness: 0.5})
 
   gltf.scene.traverse((child) => {
     if (child.name == "sunblock") child.remove();
@@ -61,7 +61,16 @@ Resources.loadAll().then(() => {
   const bgTarget = new THREE.WebGLCubeRenderTarget(bgTexture.image.height);
   bgTarget.fromEquirectangularTexture(renderer, bgTexture);
   bgTarget.texture.encoding = THREE.sRGBEncoding;
+  bgTarget.texture.offset.x = .4;
+
+
+  // Add point light:
+  const pointLight = new THREE.PointLight(0xff7722, 1, 100);
+  pointLight.position.set(10, 5, -3);
+  scene.add(pointLight);
+
   scene.background = bgTarget.texture;
+  scene.background.offset.x = .4;
   return bgTarget;
 })
 
@@ -94,9 +103,9 @@ window.addEventListener('resize', () => {
 // Base camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
 
-camera.position.x = 3
-camera.position.y = 8
-camera.position.z = 10
+camera.position.x = 1
+camera.position.y = 4
+camera.position.z = 1
 scene.add(camera)
 
 // Controls
@@ -107,10 +116,14 @@ controls.enableDamping = true
  * Renderer
  */
 const renderer = new THREE.WebGLRenderer({
-  canvas: canvas
+  canvas: canvas,
+  antialias: true,
 })
+renderer.toneMapping = THREE.CineonToneMapping;
+renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+
 
 /**
  * Animate
