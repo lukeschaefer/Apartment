@@ -19,7 +19,8 @@ const scene = new THREE.Scene()
 /**
  * Textures
  */
-const bakeTexture = Resources.add("bake.jpg");
+const bakeRoughness = Resources.add("roughness.jpg");
+const bakeTexture = Resources.add("baked.jpg");
 const bakeTextures = [
   "Leather",
   "Floor",
@@ -35,13 +36,14 @@ const bakeTextures = [
 const background = Resources.add("background.jpg")
 
 
-
 // Model:
 const apartmentModel = Resources.add("apartment.glb", (gltf) => {
+  const roughness = bakeRoughness.get();
+  roughness.flipY = false;
   const text = bakeTexture.get();
   text.flipY = false;
   text.encoding = THREE.sRGBEncoding;
-  const bakeMaterial = new MeshBakedMaterial({ map: text, roughness: 0.5, metalness: 0.5})
+  const bakeMaterial = new MeshBakedMaterial({ map: text, roughnessMap: roughness})
 
   gltf.scene.traverse((child) => {
     if (child.name == "sunblock") child.remove();
@@ -63,15 +65,38 @@ Resources.loadAll().then(() => {
   bgTarget.texture.encoding = THREE.sRGBEncoding;
   bgTarget.texture.offset.x = .4;
 
+  // Ambient light:
+  const ambientLight = new THREE.AmbientLight(0xffccaa, 0.3);
+  scene.add(ambientLight);
 
-  // Add point light:
-  const pointLight = new THREE.PointLight(0xff7722, 1, 100);
-  pointLight.position.set(10, 5, -3);
-  scene.add(pointLight);
+  // Add point lights:
+
+  const lights : {color: number, position: [number,number,number]}[] = [
+    // Sun light
+    { color: 0xff7722, position: [10, 5, -3] },
+    // Living room ceiling:
+    { color: 0xffffcc, position: [0, 6, -1] },
+  ]
+  lights.forEach((light) => {
+    const pointLight = new THREE.PointLight(light.color, 1, 100);
+    pointLight.position.set(...light.position);
+    scene.add(pointLight);
+  })
 
   scene.background = bgTarget.texture;
   scene.background.offset.x = .4;
-  return bgTarget;
+  scene.environment = bgTarget.texture;
+
+  // Add options for tone mapping:
+  const toneMapping = {
+    None: THREE.NoToneMapping,
+    Linear: THREE.LinearToneMapping,
+    Reinhard: THREE.ReinhardToneMapping,
+    Cineon: THREE.CineonToneMapping,
+    ACESFilmic: THREE.ACESFilmicToneMapping,
+  };
+  gui.add(renderer, "toneMapping", toneMapping).onChange((value : THREE.ToneMapping) => renderer.toneMapping = value);
+  gui.add(renderer, "toneMappingExposure", 0, 2, 0.01).onChange((value : number) => renderer.toneMappingExposure = value);
 })
 
 
@@ -120,6 +145,7 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
 })
 renderer.toneMapping = THREE.CineonToneMapping;
+renderer.toneMappingExposure = .8;
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
