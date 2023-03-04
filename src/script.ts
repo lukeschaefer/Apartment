@@ -1,9 +1,10 @@
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { Resources } from './Resources'
 import * as dat from 'lil-gui'
 import {MeshBakedMaterial} from 'mesh-baked-material'
+import { Controls } from './Controls'
+
 /**
  * Base
  */
@@ -129,13 +130,12 @@ window.addEventListener('resize', () => {
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
 
 camera.position.x = 1
-camera.position.y = 4
+camera.position.y = 3
 camera.position.z = 1
 scene.add(camera)
 
 // Controls
-const controls = new OrbitControls(camera, canvas)
-controls.enableDamping = true
+const controls = new Controls(camera, canvas)
 
 /**
  * Renderer
@@ -160,7 +160,7 @@ const tick = () => {
   const elapsedTime = clock.getElapsedTime()
 
   // Update controls
-  controls.update()
+  controls.update();
 
   // Render
   renderer.render(scene, camera)
