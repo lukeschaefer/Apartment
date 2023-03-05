@@ -4,88 +4,40 @@ export class Controls {
   camera: THREE.Camera
   canvas: HTMLElement
 
+  inertia = new THREE.Vector2(0,0);
+  dragging = false;
+  enabled = true;
+
   constructor(camera : THREE.Camera, canvas : HTMLElement) {
     this.camera = camera
     this.canvas = canvas
 
-    // Set up the orbit controls
-    this.initControls();
-  }
-
-  maxSpeed = .8;
-  thrust = .01;
-  enabled = true;
-  minPhi = -Math.PI / 2;
-  maxPhi = Math.PI / 2;
-  thrustVector = new THREE.Vector3();
-
-  keyState = {
-    "W":false,
-    "A":false,
-    "S":false,
-    "D":false,
-    "Q":false,
-    "E":false,
-  };
-
-
-  initControls() {
     document.addEventListener('touchstart', this.moveDrag.bind(this));
     document.addEventListener('mousedown', this.moveDrag.bind(this));
-    document.addEventListener('keydown', this.keydown.bind(this));
-
-    document.body.addEventListener('keyup', (ev) => {
-        this.keyState[ev.key.toUpperCase()] = false;  
-    });
-  }
-
-  keydown(ev: KeyboardEvent) : void{
-    // Move using WASD keys:
-    if (!this.enabled) return;
-    const key = ev.key;
-    this.keyState[key.toUpperCase()] = true;
   }
 
   update() {
-    const cameraRotation = this.camera.quaternion;
-    const cameraRotationEuler = new THREE.Euler().setFromQuaternion(cameraRotation);
-    const cameraRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(cameraRotationEuler);
-    const cameraForward = new THREE.Vector3(0, 0, -1).applyMatrix4(cameraRotationMatrix);
-    const cameraRight = new THREE.Vector3(1, 0, 0).applyMatrix4(cameraRotationMatrix);
-    const cameraUp = new THREE.Vector3(0, 1, 0).applyMatrix4(cameraRotationMatrix);
-    if (this.keyState["W"]) {
-      this.thrustVector.addScaledVector(cameraForward, this.thrust);
+    if(this.inertia.length() < .001) return;
+
+
+    this.inertia.multiplyScalar(.9);
+    if (!this.dragging){
+      const cameraRotationEuler = new THREE.Euler().setFromQuaternion(this.camera.quaternion);
+      const cameraRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(cameraRotationEuler);
+      const cameraForward = new THREE.Vector3(0, 0, -1).applyMatrix4(cameraRotationMatrix);
+      
+      this.camera.rotation.y += this.inertia.x;
+      this.camera.position.add(cameraForward.clone().multiplyScalar(this.inertia.y));
     }
-    if (this.keyState['S']) {
-      this.thrustVector.addScaledVector(cameraForward, -this.thrust);
-    }
-    if (this.keyState['A']) {
-      this.thrustVector.addScaledVector(cameraRight, -this.thrust);
-    }
-    if (this.keyState['D']) {
-      this.thrustVector.addScaledVector(cameraRight, this.thrust);
-    }
-    if (this.keyState['Q']) {
-      this.thrustVector.addScaledVector(cameraUp, -this.thrust);
-    }
-    if (this.keyState['E']) {
-      this.thrustVector.addScaledVector(cameraUp, this.thrust);
-    }
-    const cameraPosition = this.camera.position;
-    this.thrustVector.multiplyScalar(.85);
-    this.thrustVector.clampLength(0, .06);
-    if(this.thrustVector.length() < .007) {
-      this.thrustVector.set(0,0,0);
-    }
-    cameraPosition.add(this.thrustVector);
+
+    if(this.inertia.length() < .001) this.inertia.set(0,0);
   }
 
   moveDrag(ev: TouchEvent | MouseEvent) {
     if (!this.enabled) return true;
-
+    this.dragging = true;
     // Get clientX for either TouchEvent or MouseEvent:
-    let lastX = (ev as TouchEvent).touches ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
-    let lastY = (ev as TouchEvent).touches ? (ev as TouchEvent).touches[0].clientY : (ev as MouseEvent).clientY;
+    let lastPosition = this.getScreenPosition(ev);
 
     const listener = (ev: MouseEvent | TouchEvent) => {
       if (!this.enabled) return;
@@ -94,22 +46,29 @@ export class Controls {
       const cameraRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(cameraRotationEuler);
       const cameraForward = new THREE.Vector3(0, 0, -1).applyMatrix4(cameraRotationMatrix);
   
-      let clientX = (ev as TouchEvent).touches ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
-      const diffX = clientX - lastX;
-      lastX = clientX;
+      const position = this.getScreenPosition(ev);
 
-      let clientY = (ev as TouchEvent).touches ? (ev as TouchEvent).touches[0].clientY : (ev as MouseEvent).clientY;
-      const diffY = clientY - lastY;
-      this.camera.position.add(cameraForward.clone().multiplyScalar(diffY * .01));
+      const diffX = position.x - lastPosition.x;  
+      const diffY = position.y - lastPosition.y;
 
-      lastY = clientY;
-      // It takes a window width to rotate 120 degrees:
-      let pixelsPerRotation = window.innerWidth / 180;
+      lastPosition.set(position.x, position.y);
+
+      // Figure out the horizontal FOV based on vFov and aspect ratio:
+      let vFov = 80;
+      let aspect = window.innerWidth / window.innerHeight;
+      const hFov = aspect * vFov + 25;
+
+      const dist = diffY * .008 / aspect;
+      this.camera.position.add(cameraForward.clone().multiplyScalar(dist));
+
+      let pixelsPerRotation = window.innerWidth / hFov;
       let diffDegX = (diffX / pixelsPerRotation) * Math.PI / 180;
-      let diffDegY = (diffY / pixelsPerRotation) * Math.PI / 180;
       this.camera.rotation.order = 'YXZ';
-
       this.camera.rotation.y += diffDegX;
+
+      this.inertia.x = diffDegX;
+      this.inertia.y = dist;
+
       // this.camera.rotation.x += diffDegY * .8;
       // this.camera.rotation.x = THREE.MathUtils.clamp(this.camera.rotation.x, this.minPhi, this.maxPhi);
     };
@@ -117,15 +76,37 @@ export class Controls {
     document.body.addEventListener('mousemove', listener);
 
     document.body.addEventListener('mouseup', (ev) => {
+      this.dragging = false;
       document.body.removeEventListener('mousemove', listener);
       document.body.removeEventListener('touchmove', listener);
     }, { once: true });
     document.body.addEventListener('touchend', (ev) => {
+      this.dragging = false;
       document.body.removeEventListener('mousemove', listener);
       document.body.removeEventListener('touchmove', listener);
     }, { once: true });
 
     //ev.preventDefault();
     return true;
+  }
+
+  getScreenPosition(ev: MouseEvent | TouchEvent) {
+    let clientX, clientY;
+    if(ev instanceof TouchEvent) {
+      if( ev.touches && ev.touches.length > 0) {
+        clientX = ev.touches[0].clientX;
+        clientY = ev.touches[0].clientY;
+      } else if( ev.changedTouches && ev.changedTouches.length > 0) {
+        clientX = ev.changedTouches[0].clientX;
+        clientY = ev.changedTouches[0].clientY;
+      } else {
+        console.error("Got a touch event with no touches or changedTouches!")
+      }
+    } else {
+      clientX = ev.clientX;
+      clientY = ev.clientY;
+    }
+
+    return new THREE.Vector2(clientX, clientY);
   }
 }
