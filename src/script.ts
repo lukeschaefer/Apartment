@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { Resources } from './Resources'
 import * as dat from 'lil-gui'
 import {MeshBakedMaterial} from 'mesh-baked-material'
@@ -10,6 +9,11 @@ import { Controls } from './Controls'
  */
 // Debug
 const gui = new dat.GUI()
+
+// hide debug menu if not running with 'dev' in the url:
+if (!window.location.href.includes("dev")) {
+  gui.hide();
+}
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl') as HTMLCanvasElement;
@@ -98,8 +102,14 @@ Resources.loadAll().then(() => {
   };
   gui.add(renderer, "toneMapping", toneMapping).onChange((value : THREE.ToneMapping) => renderer.toneMapping = value);
   gui.add(renderer, "toneMappingExposure", 0, 2, 0.01).onChange((value : number) => renderer.toneMappingExposure = value);
+  enableButton();
 })
 
+function enableButton() {
+  const button = document.getElementById("start");
+  button?.removeAttribute("disabled");
+  button!.innerText = "Close";
+}
 
 /**
  * Sizes

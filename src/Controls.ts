@@ -25,7 +25,7 @@ export class Controls {
       const cameraRotationEuler = new THREE.Euler().setFromQuaternion(this.camera.quaternion);
       const cameraRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(cameraRotationEuler);
       const cameraForward = new THREE.Vector3(0, 0, -1).applyMatrix4(cameraRotationMatrix);
-      
+
       this.camera.rotation.y += this.inertia.x;
       this.camera.position.add(cameraForward.clone().multiplyScalar(this.inertia.y));
     }
@@ -45,7 +45,8 @@ export class Controls {
       const cameraRotationEuler = new THREE.Euler().setFromQuaternion(this.camera.quaternion);
       const cameraRotationMatrix = new THREE.Matrix4().makeRotationFromEuler(cameraRotationEuler);
       const cameraForward = new THREE.Vector3(0, 0, -1).applyMatrix4(cameraRotationMatrix);
-  
+      const cameraRight = new THREE.Vector3(1, 0, 0).applyMatrix4(cameraRotationMatrix);
+
       const position = this.getScreenPosition(ev);
 
       const diffX = position.x - lastPosition.x;  
@@ -65,6 +66,8 @@ export class Controls {
       let diffDegX = (diffX / pixelsPerRotation) * Math.PI / 180;
       this.camera.rotation.order = 'YXZ';
       this.camera.rotation.y += diffDegX;
+
+      this.camera.position.add(cameraRight.clone().multiplyScalar(diffDegX * .5));
 
       this.inertia.x = diffDegX;
       this.inertia.y = dist;

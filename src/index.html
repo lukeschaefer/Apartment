@@ -3,10 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Apartment</title>
+    <title>Luke.Software</title>
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+  <dialog open>
+    <h2>Luke Schaefer</h2>
+    <p>
+      Hi, this is my work-in-progress model of my apartment! <br>
+      - Optimized for mobile right now, tap and drag to move around. <br>
+      - Eventually I'll it more interactive
+      - View the code <a href="https://github.com/lukeschaefer/Apartment">here</a>
+    </p>
+    <button id="start" disabled onclick="this.parentNode.remove()">Loading...</button>
+  </dialog>
     <canvas class="webgl"></canvas>
     <script type="module" src="./script.ts"></script>
 </body>
